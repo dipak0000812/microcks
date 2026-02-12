@@ -124,7 +124,7 @@ export class ServiceDetailPageComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private ref: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.notifications = this.notificationService.getNotifications();
@@ -232,8 +232,8 @@ export class ServiceDetailPageComponent implements OnInit {
         let anyExchange = exchange as any;
         if (
           (anyExchange.request != undefined && anyExchange.request.sourceArtifact === 'AI Copilot')
-            || (anyExchange.eventMessage != undefined && anyExchange.eventMessage.sourceArtifact === 'AI Copilot')
-          ) {
+          || (anyExchange.eventMessage != undefined && anyExchange.eventMessage.sourceArtifact === 'AI Copilot')
+        ) {
           this.aiCopilotSamples = true;
           return;
         }
@@ -341,7 +341,7 @@ export class ServiceDetailPageComponent implements OnInit {
     this.copilotSvc.launchSamplesGeneration(this.resolvedServiceView.service).subscribe((res) => {
       this.aiCopilotTaskId = res.taskId;
       console.log('AI Copilot task id: ' + this.aiCopilotTaskId);
-      this.notificationService.message( 
+      this.notificationService.message(
         NotificationType.INFO,
         this.resolvedServiceView.service.name,
         'AI Copilot Samples generation started...',
@@ -355,29 +355,29 @@ export class ServiceDetailPageComponent implements OnInit {
       this.aiPoller = interval(5000).pipe(
         switchMap(() => this.copilotSvc.getGenerationTaskStatus(this.aiCopilotTaskId!))
       ).subscribe((res) => {
-          console.log("Response: " + JSON.stringify(res));
-          if (res.status === 'SUCCESS') {
-            this.notificationService.message(
-              NotificationType.SUCCESS,
-              this.resolvedServiceView.service.name,
-              'AI Copilot Samples generation finished!',
-              false
-            );
-            this.aiCopilotTaskId = null;
-            this.aiPoller!.unsubscribe();
-          } else if (res.status === 'FAILURE') {
-            this.notificationService.message(
-              NotificationType.DANGER,
-              this.resolvedServiceView.service.name,
-              'AI Copilot Samples generation failed',
-              false
-            );
-            this.aiCopilotTaskId = null;
-            this.aiPoller!.unsubscribe();
-          }
-          // Refresh the view to update the spinner and the notifications toaster.
-          this.refreshServiceView();
-        });
+        console.log("Response: " + JSON.stringify(res));
+        if (res.status === 'SUCCESS') {
+          this.notificationService.message(
+            NotificationType.SUCCESS,
+            this.resolvedServiceView.service.name,
+            'AI Copilot Samples generation finished!',
+            false
+          );
+          this.aiCopilotTaskId = null;
+          this.aiPoller!.unsubscribe();
+        } else if (res.status === 'FAILURE') {
+          this.notificationService.message(
+            NotificationType.DANGER,
+            this.resolvedServiceView.service.name,
+            'AI Copilot Samples generation failed',
+            false
+          );
+          this.aiCopilotTaskId = null;
+          this.aiPoller!.unsubscribe();
+        }
+        // Refresh the view to update the spinner and the notifications toaster.
+        this.refreshServiceView();
+      });
     });
   }
   public isAIEnrichInProgress(): boolean {
@@ -602,8 +602,8 @@ export class ServiceDetailPageComponent implements OnInit {
 
   public isMCPAvailable(): boolean {
     return this.resolvedServiceView.service.type === ServiceType.REST
-        || this.resolvedServiceView.service.type === ServiceType.GRPC
-        || this.resolvedServiceView.service.type === ServiceType.GRAPHQL
+      || this.resolvedServiceView.service.type === ServiceType.GRPC
+      || this.resolvedServiceView.service.type === ServiceType.GRAPHQL
   }
   public formatMCPUrl(suffix: string = ''): string {
     let result = document.location.origin;
@@ -879,11 +879,32 @@ export class ServiceDetailPageComponent implements OnInit {
 
       cmd = 'curl -X ' + verb + ' \'' + mockUrl + '\'';
 
+      let hasSoapAction = false;
+      let hasSoap12ContentType = false;
+
       // Add request headers if any.
       if (exchange.request.headers != null) {
         for (const header of exchange.request.headers) {
+          if (header.name.toLowerCase() === 'soapaction') {
+            hasSoapAction = true;
+          }
+          if (this.resolvedServiceView.service.type === ServiceType.SOAP_HTTP
+            && header.name.toLowerCase() === 'content-type'
+            && header.values.some(v => v.indexOf('application/soap+xml') !== -1)) {
+            hasSoap12ContentType = true;
+            if (!header.values.some(v => v.indexOf('action=') !== -1) && operation.action) {
+              cmd += ` -H '${header.name}: ${header.values.join(', ')}; action="${operation.action}"'`;
+              continue;
+            }
+          }
           cmd += ` -H '${header.name}: ${header.values.join(', ')}'`;
         }
+      }
+
+      // Add a SOAPAction header if missing and we are on SOAP 1.1 (plain soap/xml).
+      if (this.resolvedServiceView.service.type === ServiceType.SOAP_HTTP
+        && !hasSoapAction && !hasSoap12ContentType && operation.action) {
+        cmd += ` -H 'SOAPAction: "${operation.action}"'`;
       }
 
       // Add a content-type header if missing and obvious we need one.
@@ -905,16 +926,16 @@ export class ServiceDetailPageComponent implements OnInit {
     }
 
     if (exchange.request.content != null
-        && exchange.request.content != undefined
-         && exchange.request.content != '') {
+      && exchange.request.content != undefined
+      && exchange.request.content != '') {
       cmd += ' -d \'' + exchange.request.content.replace(/\n/g, '') + '\'';
     }
 
     if (this.resolvedServiceView.service.type === ServiceType.GRPC) {
       // Add empty request body.
       if (exchange.request.content == null
-          || exchange.request.content == undefined
-          || exchange.request.content == '') {
+        || exchange.request.content == undefined
+        || exchange.request.content == '') {
         cmd += ' -d \'{}\'';
       }
       if (mockUrl.indexOf('://') != -1) {
@@ -985,7 +1006,7 @@ export class ServiceDetailPageComponent implements OnInit {
       //console.log('hasRepositoryTenancyFeatureEnabled');
       const tenant =
         this.resolvedServiceView.service.metadata.labels[
-          this.repositoryTenantLabel()
+        this.repositoryTenantLabel()
         ];
       if (tenant !== undefined) {
         return this.authService.hasRoleForResource(role, tenant);
